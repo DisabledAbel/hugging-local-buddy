@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Github, Cpu, HardDrive, Monitor } from "lucide-react";
 
 interface DeviceSpecs {
+  language: string;
+  version: string;
   os: string;
-  python: string;
   gpu: string;
   ram: string;
   packageManager: string;
@@ -24,22 +25,97 @@ interface SetupFormProps {
 export const SetupForm = ({ onAnalyze, isLoading }: SetupFormProps) => {
   const [repoUrl, setRepoUrl] = useState("");
   const [specs, setSpecs] = useState<DeviceSpecs>({
+    language: "",
+    version: "",
     os: "",
-    python: "",
     gpu: "none",
     ram: "",
-    packageManager: "pip",
+    packageManager: "",
     docker: false,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (repoUrl && specs.os && specs.python && specs.ram) {
+    if (repoUrl && specs.language && specs.version && specs.os && specs.ram) {
       onAnalyze(repoUrl, specs);
     }
   };
 
-  const isFormValid = repoUrl && specs.os && specs.python && specs.ram;
+  const getPackageManagerOptions = () => {
+    switch (specs.language) {
+      case "python":
+        return [
+          { value: "pip", label: "pip" },
+          { value: "conda", label: "conda" },
+          { value: "mamba", label: "mamba" },
+          { value: "poetry", label: "poetry" },
+        ];
+      case "javascript":
+        return [
+          { value: "npm", label: "npm" },
+          { value: "yarn", label: "yarn" },
+          { value: "pnpm", label: "pnpm" },
+          { value: "bun", label: "bun" },
+        ];
+      case "r":
+        return [
+          { value: "install.packages", label: "install.packages" },
+          { value: "pak", label: "pak" },
+          { value: "renv", label: "renv" },
+        ];
+      case "julia":
+        return [
+          { value: "pkg", label: "Pkg.jl" },
+        ];
+      case "rust":
+        return [
+          { value: "cargo", label: "cargo" },
+        ];
+      default:
+        return [{ value: "default", label: "Default package manager" }];
+    }
+  };
+
+  const getVersionOptions = () => {
+    switch (specs.language) {
+      case "python":
+        return [
+          { value: "3.12", label: "Python 3.12" },
+          { value: "3.11", label: "Python 3.11" },
+          { value: "3.10", label: "Python 3.10" },
+          { value: "3.9", label: "Python 3.9" },
+          { value: "3.8", label: "Python 3.8" },
+        ];
+      case "javascript":
+        return [
+          { value: "20", label: "Node.js 20 LTS" },
+          { value: "18", label: "Node.js 18 LTS" },
+          { value: "16", label: "Node.js 16" },
+        ];
+      case "r":
+        return [
+          { value: "4.3", label: "R 4.3" },
+          { value: "4.2", label: "R 4.2" },
+          { value: "4.1", label: "R 4.1" },
+        ];
+      case "julia":
+        return [
+          { value: "1.9", label: "Julia 1.9" },
+          { value: "1.8", label: "Julia 1.8" },
+          { value: "1.7", label: "Julia 1.7" },
+        ];
+      case "rust":
+        return [
+          { value: "1.75", label: "Rust 1.75" },
+          { value: "1.74", label: "Rust 1.74" },
+          { value: "stable", label: "Rust Stable" },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const isFormValid = repoUrl && specs.language && specs.version && specs.os && specs.ram;
 
   return (
     <Card className="bg-gradient-card border-border/50 shadow-card">
@@ -68,6 +144,42 @@ export const SetupForm = ({ onAnalyze, isLoading }: SetupFormProps) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label htmlFor="language">Programming Language</Label>
+              <Select value={specs.language} onValueChange={(value) => setSpecs({ ...specs, language: value, version: "", packageManager: "" })}>
+                <SelectTrigger className="bg-secondary/50 border-border/50">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="python">Python</SelectItem>
+                  <SelectItem value="javascript">JavaScript/Node.js</SelectItem>
+                  <SelectItem value="r">R</SelectItem>
+                  <SelectItem value="julia">Julia</SelectItem>
+                  <SelectItem value="rust">Rust</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="version">Language Version</Label>
+              <Select 
+                value={specs.version} 
+                onValueChange={(value) => setSpecs({ ...specs, version: value })}
+                disabled={!specs.language}
+              >
+                <SelectTrigger className="bg-secondary/50 border-border/50">
+                  <SelectValue placeholder={specs.language ? "Select version" : "Select language first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {getVersionOptions().map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="os">Operating System</Label>
               <Select value={specs.os} onValueChange={(value) => setSpecs({ ...specs, os: value })}>
                 <SelectTrigger className="bg-secondary/50 border-border/50">
@@ -81,22 +193,6 @@ export const SetupForm = ({ onAnalyze, isLoading }: SetupFormProps) => {
                   <SelectItem value="debian">Debian</SelectItem>
                   <SelectItem value="fedora">Fedora</SelectItem>
                   <SelectItem value="arch">Arch Linux</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="python">Python Version</Label>
-              <Select value={specs.python} onValueChange={(value) => setSpecs({ ...specs, python: value })}>
-                <SelectTrigger className="bg-secondary/50 border-border/50">
-                  <SelectValue placeholder="Select Python version" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="3.12">Python 3.12</SelectItem>
-                  <SelectItem value="3.11">Python 3.11</SelectItem>
-                  <SelectItem value="3.10">Python 3.10</SelectItem>
-                  <SelectItem value="3.9">Python 3.9</SelectItem>
-                  <SelectItem value="3.8">Python 3.8</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -142,15 +238,20 @@ export const SetupForm = ({ onAnalyze, isLoading }: SetupFormProps) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="package-manager">Package Manager</Label>
-              <Select value={specs.packageManager} onValueChange={(value) => setSpecs({ ...specs, packageManager: value })}>
+              <Select 
+                value={specs.packageManager} 
+                onValueChange={(value) => setSpecs({ ...specs, packageManager: value })}
+                disabled={!specs.language}
+              >
                 <SelectTrigger className="bg-secondary/50 border-border/50">
-                  <SelectValue placeholder="Select package manager" />
+                  <SelectValue placeholder={specs.language ? "Select package manager" : "Select language first"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pip">pip</SelectItem>
-                  <SelectItem value="conda">conda</SelectItem>
-                  <SelectItem value="mamba">mamba</SelectItem>
-                  <SelectItem value="poetry">poetry</SelectItem>
+                  {getPackageManagerOptions().map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -176,7 +277,7 @@ export const SetupForm = ({ onAnalyze, isLoading }: SetupFormProps) => {
             </Badge>
             <Badge variant="secondary" className="flex items-center gap-1">
               <Cpu className="h-3 w-3" />
-              {specs.python || "Python"}
+              {specs.language ? `${specs.language} ${specs.version}` : "Language"}
             </Badge>
             <Badge variant="secondary" className="flex items-center gap-1">
               <HardDrive className="h-3 w-3" />

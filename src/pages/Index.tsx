@@ -7,8 +7,9 @@ import { Bot, Github, Zap, Sparkles } from "lucide-react";
 import heroIllustration from "@/assets/hero-illustration.jpg";
 
 interface DeviceSpecs {
+  language: string;
+  version: string;
   os: string;
-  python: string;
   gpu: string;
   ram: string;
   packageManager: string;
@@ -20,37 +21,147 @@ const analyzeRepository = async (repoUrl: string, specs: DeviceSpecs) => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 2000));
   
-  // Mock analysis result based on common Hugging Face patterns
+  // Language-specific configurations
+  const getLanguageConfig = () => {
+    switch (specs.language) {
+      case "python":
+        return {
+          techStack: ["Transformers", "Gradio", "PyTorch", "NumPy"],
+          venvCommand: specs.packageManager === "conda" 
+            ? `conda create -n hf-app python=${specs.version}\nconda activate hf-app`
+            : `python -m venv hf-app\nsource hf-app/bin/activate  # On Windows: hf-app\\Scripts\\activate`,
+          installCommand: specs.packageManager === "conda"
+            ? "conda install pytorch transformers gradio -c pytorch -c huggingface"
+            : "pip install torch transformers gradio accelerate",
+          runCommand: "python app.py",
+          accessUrl: "http://localhost:7860",
+          envSetup: [
+            "Ensure you have at least 4GB of free disk space for models",
+            "Set CUDA_VISIBLE_DEVICES if you have multiple GPUs",
+            "Configure Hugging Face token if using gated models",
+            "Install Git LFS for large model files if needed"
+          ],
+          troubleshooting: [
+            "If CUDA out of memory, try reducing batch size or model precision",
+            "For slow downloads, consider using a mirror or cache",
+            "On Windows, you might need Visual Studio Build Tools",
+            "For M1/M2 Macs, use MPS backend for acceleration"
+          ]
+        };
+        
+      case "javascript":
+        return {
+          techStack: ["Transformers.js", "Node.js", "Express", "TensorFlow.js"],
+          venvCommand: specs.packageManager === "yarn"
+            ? "yarn init -y"
+            : "npm init -y",
+          installCommand: specs.packageManager === "yarn"
+            ? "yarn add @huggingface/transformers @huggingface/hub express"
+            : "npm install @huggingface/transformers @huggingface/hub express",
+          runCommand: "node server.js",
+          accessUrl: "http://localhost:3000",
+          envSetup: [
+            `Ensure Node.js ${specs.version} is installed`,
+            "Install dependencies with your package manager",
+            "Configure environment variables in .env file",
+            "Set up CORS if accessing from browser"
+          ],
+          troubleshooting: [
+            "If WebGPU not available, models will fallback to CPU",
+            "Large models may require significant RAM",
+            "Use model quantization for better performance",
+            "Check browser compatibility for WebGL/WebGPU"
+          ]
+        };
+        
+      case "r":
+        return {
+          techStack: ["reticulate", "torch", "transformers (via Python)", "Shiny"],
+          venvCommand: "# R environment setup\ninstall.packages('renv')\nrenv::init()",
+          installCommand: `install.packages(c("reticulate", "shiny"))\nreticulate::py_install(c("torch", "transformers"))`,
+          runCommand: "Rscript app.R",
+          accessUrl: "http://localhost:3838",
+          envSetup: [
+            "Install R and required packages",
+            "Configure reticulate to use Python environment",
+            "Install Python dependencies via reticulate",
+            "Set up Shiny server for web interface"
+          ],
+          troubleshooting: [
+            "Ensure Python and R can communicate via reticulate",
+            "Install system dependencies for torch compilation",
+            "Configure PATH variables for Python/R integration",
+            "Use virtual environments to avoid conflicts"
+          ]
+        };
+        
+      case "julia":
+        return {
+          techStack: ["MLJ.jl", "Transformers.jl", "Flux.jl", "PlutoUI"],
+          venvCommand: "julia --project=.\nusing Pkg\nPkg.activate(\".\")",
+          installCommand: "Pkg.add([\"MLJ\", \"Transformers\", \"Flux\", \"PlutoUI\"])",
+          runCommand: "julia app.jl",
+          accessUrl: "http://localhost:8000",
+          envSetup: [
+            `Ensure Julia ${specs.version} is installed`,
+            "Create and activate project environment",
+            "Install required Julia packages",
+            "Configure CUDA.jl for GPU support if available"
+          ],
+          troubleshooting: [
+            "Precompile packages to reduce startup time",
+            "Use BinaryBuilder.jl for system dependencies",
+            "Configure JULIA_NUM_THREADS for parallelization",
+            "Check CUDA installation for GPU acceleration"
+          ]
+        };
+        
+      case "rust":
+        return {
+          techStack: ["Candle", "Tokenizers", "Axum", "Serde"],
+          venvCommand: "cargo init hf-app\ncd hf-app",
+          installCommand: "cargo add candle-core candle-nn tokenizers axum serde",
+          runCommand: "cargo run",
+          accessUrl: "http://localhost:8080",
+          envSetup: [
+            `Ensure Rust ${specs.version} is installed`,
+            "Initialize Cargo project",
+            "Add required dependencies to Cargo.toml",
+            "Configure features for CUDA support if needed"
+          ],
+          troubleshooting: [
+            "Compile with --release flag for better performance",
+            "Install CUDA toolkit for GPU support",
+            "Use cross-compilation for different targets",
+            "Enable LTO for smaller binaries"
+          ]
+        };
+        
+      default:
+        return {
+          techStack: ["Generic ML Framework"],
+          venvCommand: "# Environment setup varies by language",
+          installCommand: "# Install language-specific dependencies",
+          runCommand: "# Run application",
+          accessUrl: "http://localhost:8000",
+          envSetup: ["Configure your development environment"],
+          troubleshooting: ["Check documentation for language-specific issues"]
+        };
+    }
+  };
+
+  const config = getLanguageConfig();
+  
   const mockResult = {
-    techStack: ["Transformers", "Gradio", "PyTorch", "NumPy"],
+    ...config,
     compatibility: "95%",
-    estimatedTime: "5-10 min",
-    modelSize: "1.2 GB",
-    venvCommand: specs.packageManager === "conda" 
-      ? "conda create -n hf-app python=3.10\nconda activate hf-app"
-      : "python -m venv hf-app\nsource hf-app/bin/activate  # On Windows: hf-app\\Scripts\\activate",
-    installCommand: specs.packageManager === "conda"
-      ? "conda install pytorch transformers gradio -c pytorch -c huggingface"
-      : "pip install torch transformers gradio accelerate",
-    runCommand: "python app.py",
-    accessUrl: "http://localhost:7860",
-    envSetup: [
-      "Ensure you have at least 4GB of free disk space for models",
-      "Set CUDA_VISIBLE_DEVICES if you have multiple GPUs",
-      "Configure Hugging Face token if using gated models",
-      "Install Git LFS for large model files if needed"
-    ],
-    troubleshooting: [
-      "If CUDA out of memory, try reducing batch size or model precision",
-      "For slow downloads, consider using a mirror or cache",
-      "On Windows, you might need Visual Studio Build Tools",
-      "For M1/M2 Macs, use MPS backend for acceleration"
-    ],
+    estimatedTime: specs.language === "rust" ? "10-15 min" : specs.language === "julia" ? "8-12 min" : "5-10 min",
+    modelSize: specs.language === "javascript" ? "200 MB" : "1.2 GB",
     alternatives: [
       {
-        name: "Google Colab",
-        description: "Run in the cloud with free GPU access",
-        url: "https://colab.research.google.com"
+        name: specs.language === "python" ? "Google Colab" : "CodeSandbox",
+        description: specs.language === "python" ? "Run in the cloud with free GPU access" : "Run in browser environment",
+        url: specs.language === "python" ? "https://colab.research.google.com" : "https://codesandbox.io"
       },
       {
         name: "Hugging Face Spaces",
